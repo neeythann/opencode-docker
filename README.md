@@ -12,6 +12,7 @@ session store, a non-root `dev` user, and optional `root` access via `su`.
 | `entrypoint.sh` | Sets the root password from `$ROOT_PASSWORD`, then drops to `dev` |
 | `.env.example` | Template for required environment variables |
 | `opencode/` | Mounted workspace (`/workspace` inside the container) |
+| `k8s/` | Kubernetes manifests (Deployment, Service, PVC, ExternalSecret) |
 | `LICENSE` | AGPL-3.0 |
 | `THIRD_PARTY_NOTICES.md` | Licenses for opencode and the base image |
 
@@ -124,6 +125,43 @@ docker volume create opencode-dev_opencode-data
 docker run --rm -v opencode-dev_opencode-data:/d -v "$PWD":/backup alpine \
   sh -c 'tar xzf /backup/opencode-data.tgz -C /d && chown -R 1000:1000 /d'
 ```
+
+## Kubernetes
+
+Manifests live in `k8s/` and target the `default` namespace:
+
+| File | Resource |
+| --- | --- |
+| `deployment.yaml` | `Deployment` running `opencode web`, `Recreate` strategy |
+| `service.yaml` | `ClusterIP` Service on port 4096 |
+| `pvc.yaml` | `PersistentVolumeClaim` for `/home/dev/.local/share/opencode` |
+| `externalsecret.yaml` | ExternalSecret syncing keys into `opencode-secret` |
+
+The Deployment reads `OPENCODE_SERVER_PASSWORD`, `ROOT_PASSWORD`, and
+`OLLAMA_API_KEY` from the `opencode-secret` Secret. The ExternalSecret pulls
+those keys from Vault at `opencode/prod`; adjust the path or property names to
+match your store.
+
+Apply:
+
+```sh
+kubectl apply -f k8s/
+```
+
+Reach it locally with a port-forward:
+
+```sh
+kubectl port-forward svc/opencode 4096:4096
+```
+
+Notes:
+
+- The container is read-only except for the mounted volume, so the `Recreate`
+  strategy avoids two pods claiming the same `ReadWriteOnce` PVC.
+- The Deployment sets `fsGroup: 1000`, so the PersistentVolume is writable by
+  the `dev` user. A storage class that supports `fsGroup` is required.
+- The image is not published yet. Push `neeythann/opencode-docker` before
+  applying, or set `image:` to a reachable reference.
 
 ## Notes
 

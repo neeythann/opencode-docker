@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencode
+  namespace: default
+  labels:
+    app: opencode
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opencode
+  template:
+    metadata:
+      labels:
+        app: opencode
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: opencode
+          image: neeythann/opencode-docker:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - opencode
+            - web
+            - --port
+            - "4096"
+            - --hostname
+            - 0.0.0.0
+          ports:
+            - name: http
+              containerPort: 4096
+          env:
+            - name: BROWSER
+              value: none
+            - name: OPENCODE_SERVER_USERNAME
+              value: opencode
+            - name: OPENCODE_SERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opencode-secret
+                  key: OPENCODE_SERVER_PASSWORD
+            - name: ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opencode-secret
+                  key: ROOT_PASSWORD
+            - name: OLLAMA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: opencode-secret
+                  key: OLLAMA_API_KEY
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /home/dev/.local/share/opencode
+          readinessProbe:
+            httpGet:
+              path: /global/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /global/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: opencode-data
