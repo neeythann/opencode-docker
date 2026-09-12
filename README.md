@@ -160,8 +160,9 @@ Notes:
   strategy avoids two pods claiming the same `ReadWriteOnce` PVC.
 - The Deployment sets `fsGroup: 1000`, so the PersistentVolume is writable by
   the `dev` user. A storage class that supports `fsGroup` is required.
-- The image is not published yet. Push `neeythann/opencode-docker` before
-  applying, or set `image:` to a reachable reference.
+- The image is published to GHCR as `ghcr.io/neeythann/opencode-docker` by the
+  workflow in `.github/workflows/docker-image.yml`. If the package is private,
+  add an `imagePullSecret` to the Deployment.
 
 ## Notes
 

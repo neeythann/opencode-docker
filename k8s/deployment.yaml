@@ -21,7 +21,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: opencode
-          image: neeythann/opencode-docker:latest
+          image: ghcr.io/neeythann/opencode-docker:latest
           imagePullPolicy: IfNotPresent
           command:
             - opencode
